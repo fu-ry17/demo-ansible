@@ -1,0 +1,3 @@
+@Library("agencify-shared-lib") _
+def pipelineDefinition = backendPipelineDev.getCiPipeline()
+pipelineDefinition.call()

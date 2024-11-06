@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" th:href="@{quotations.css}">
+</head>
+
+<body>
+    <div class="center">
+        <div class="row">
+            <div class="column">
+                <img th:src="@{images/AgencifyLogo.png}" style="height: 75px; width: 200px;" />
+            </div>
+            <div class="column" style="text-align: right;">
+                <p>AIG Kenya Insurance Company</p>
+                <p>Telephone: 02098273</p>
+                <p>Email: johndoe@mail.com</p>
+            </div>
+        </div>
+        <p style="text-align: center;">
+            <strong>
+                POLICY SCHEDULE
+            </strong>
+        </p>
+        <div style="border: solid 1px black;">
+            <div class="row" style=" padding: 5px;">
+                <div class="column">
+                    <p>Insured Name: John Doe</p>
+                    <p>Telephone: 0001</p>
+                    <p>Email: johndoe@mail.com</p>
+                    <p>Pin: A008DF</p>
+                </div>
+                <div class="column">
+                    <p>Address: Nairobi P.O. BOX 02938</p>
+                    <p>Occupation: Doctor</p>
+                    <p>Year of Birth: 1900</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row" style=" padding: 5px;">
+                <div class="column">
+                    <p style="font-weight: bold;">Policy Details</p>
+                    <p>Agent Name: John2 Doe2</p>
+                    <p>Policy No: POOA8/939D</p>
+                    <p>Class Insurance: Product Description</p>
+                    <p>Cover Period: </p>
+                    <p>Renewal Date: </p>
+                </div>
+                <div class="column">
+                    <p style="font-weight: bold;">Premium Summary</p>
+                    <p>Currency: KSH</p>
+                    <p>Premium: 12000</p>
+                    <p>Training Levy: 100</p>
+                    <p>Policy Holder's Fund: 200</p>
+                    <p>Stamp Duty: 300</p>
+                    <p>Total Premium:  13000</p>
+                </div>
+            </div>
+            <div style="padding: 5px; margin-top: 10px;">
+                <table style="width: 100%;">
+                    <colgroup>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                        <col style="width: 12.5%;"/>
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <th>Reg.</th>
+                            <th>Make/Model</th>
+                            <th>Body Type</th>
+                            <th>C.C Rating</th>
+                            <th>Year of Manufacture</th>
+                            <th>Seating Capacity</th>
+                            <th>Cover Type</th>
+                            <th>Vehicle Value</th>
+                        </tr>
+                        <tr>
+                            <td>KBE 783H</td>
+                            <td>Jaguar Ftype</td>
+                            <td>Sports Car</td>
+                            <td>12000</td>
+                            <td>2012</td>
+                            <td>2</td>
+                            <td>Motor</td>
+                            <td>12000000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 5px; margin-top: 10px;">
+                <p>Insurance Provided: Cover Type</p>
+                <p>Geographical Area: East Africa(Kenya, Uganda, Burundi, Rwanda, Tanzania)</p>
+            </div>
+            <div style="padding: 5px; margin-top: 10px;">
+                <p style="font-weight: bold;">Limits of Company Liability</p>
+                
+            </div>
+            <hr>
+            <div style="padding: 5px; margin-top: 10px;">
+                <p style="font-weight: bold;">Extra Benefits</p>
+                <table style="width: 100%;">
+                    <colgroup>
+                        <col style="width: 20%;"/>
+                        <col style="width: 20%;"/>
+                        <col style="width: 20%;"/>
+                        <col style="width: 20%;"/>
+                        <col style="width: 20%;"/>
+                    </colgroup>
+                    <tr>
+                        <th>Risk ID</th>
+                        <th>Cover Type</th>
+                        <th>Benefit Name</th>
+                        <th>Unit/Value</th>
+                        <th>Premium</th>
+                    </tr>
+                    <tr>
+                        <td>Risk ID</td>
+                        <td>Cover Type</td>
+                        <td>Benefit Name</td>
+                        <td>Unit/Value</td>
+                        <td>Premium</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="page-footer">
+            <div>
+                <strong>
+                    <small>
+                        Powered by
+                    </small>
+                </strong>
+            </div>
+            <img th:src="@{classpath:static/images/AgencifyLogo.png}" style="height: 18.75px; width: 50px;" />
+        </div>
+    </div>
+</body>
+
+</html>

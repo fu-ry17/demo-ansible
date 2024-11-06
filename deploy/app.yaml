@@ -1,0 +1,48 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: gis-quotation-service
+spec:
+  selector:
+    app: gis-quotation-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 60232
+  type: NodePort
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gis-quotation-service
+spec:
+  selector:
+    matchLabels:
+      app: gis-quotation-service
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: gis-quotation-service
+    spec:
+      containers:
+        - name: gis-quotation-service
+          image: 10.0.2.12:30500/agencify/gis-quotation-service:0.0.4-SNAPSHOT
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 60232
+          readinessProbe:
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 2
+            failureThreshold: 2
+            httpGet:
+              path: /actuator
+              port: 60232

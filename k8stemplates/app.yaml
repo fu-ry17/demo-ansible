@@ -1,0 +1,120 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: gis-quotation-service
+spec:
+  selector:
+    app: gis-quotation-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 60232
+  type: NodePort
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gis-quotation-service
+spec:
+  selector:
+    matchLabels:
+      app: gis-quotation-service
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: gis-quotation-service
+    spec:
+      containers:
+        - name: gis-quotation-service
+          image: REGISTRY_LOCATION
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 60232
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "50m"
+            limits:
+              memory: "1Gi"
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms1024m -Xmx1024m"
+            - name: MYSQL_USERNAME
+              valueFrom: # Read environment variables from kubernetes secrets
+                secretKeyRef:
+                  name: agencify-db
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agencify-db
+                  key: password
+            - name: MYSQL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: agencify-db
+                  key: host
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: agencify-envs
+                  key: profile
+          readinessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 2
+            failureThreshold: 4
+            httpGet:
+              path: /actuator
+              port: 60232
+          livenessProbe:
+            httpGet:
+              path: /actuator
+              port: 60232
+            initialDelaySeconds: 120
+            timeoutSeconds: 3
+            successThreshold: 1
+            periodSeconds: 5
+            failureThreshold: 4
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gis-quotation-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gis-quotation-service
+
+---
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gis-quotation-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gis-quotation-service
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

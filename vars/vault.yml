@@ -1,0 +1,26 @@
+# Credentials for Docker Registry
+docker_registry_user: docker-registry
+docker_registry_password: your-registry-password
+
+# Credentials for Helm Repository
+helm_repo_user: docker-registry
+helm_repo_password: your-helm-password
+
+# SSH Keys
+ssh_private_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  Your SSH private key here
+  -----END RSA PRIVATE KEY-----
+
+# Kubernetes Credentials
+k8s_credentials:
+  - id: k8sonprodNS-prod
+    kubeconfig: |
+      Your prod kubeconfig here
+  - id: k8sonNewDevNS-Dev
+    kubeconfig: |
+      Your dev kubeconfig here
+
+# Sonar and Jira tokens
+sonar_token: your-sonar-token
+jira_token: your-jira-token

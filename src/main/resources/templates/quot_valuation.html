@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" th:href="@{quotations.css}" }>
+</head>
+
+<body  th:each="quotePdct : ${quote?.quotationProducts}">
+<div class="center">
+    <div class="row" style="margin-bottom: 5px">
+        <div class="column">
+            <img th:src="${quote.organization?.entities?.imageUrl}" style="height: 130px; width: 200px; object-fit: contain;"/>
+        </div>
+        <div class="column" style="text-align: right;">
+            <p th:text="${quote.organization?.entities?.organizationName}"></p>
+            <p th:text="${quote.organization?.entities?.phoneNumber}"></p>
+            <p th:text="${quote.organization?.entities?.emailAddress}"></p>
+        </div>
+    </div>
+    <div style="width: 100%;">
+        <strong style="text-align: center;">
+            <p>VEHICLE VALUATION INSTRUCTION SHEET</p>
+        </strong>
+        <p>Dear Valuer,</p>
+        <p>This is to authorize you to carry out valuation on the client's vehicle whose details are below.</p>
+        <p>Kindly forward the valuation report and your invoice to us in the usual</p>
+    </div>
+    <span th:each="risk : ${quotePdct.quotationRisks}">
+        <div style="width: 100%;">
+            <span>
+                    <table style="width: 100%; margin-top: 20px; margin-bottom: 20px;">
+                        <tr>
+                            <td style="width: 50%;"><strong>Name Of Client</strong></td>
+                            <td style="width: 50%;" th:text="${quote.clientName}"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Policy Number</strong></td>
+                            <td style="width: 50%;" th:text="${quote.policyNo}"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Renewal Date</strong></td>
+                            <td style="width: 50%;" th:text="${risk.renewalDate}"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Vehicle Registration/Chassis</strong></td>
+                            <td style="width: 50%;" th:text="${risk.riskId}"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Agent Name</strong></td>
+                            <td style="width: 50%;" th:text="${quote.agentName}"></td>
+                         </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Valuer Name</strong></td>
+                            <td style="width: 50%;" th:text="|${risk.quotationValuationInfo?.valuerName?: 'NO VALUER NAME'}|"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Valuer Email</strong></td>
+                            <td style="width: 50%;" th:text="|${risk.quotationValuationInfo?.valuerEmail?: 'NO VALUER EMAIL'}|"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Valuer Physical Address</strong></td>
+                            <td style="width: 50%;" th:text="|${risk.quotationValuationInfo?.valuerPhysicalAddress?: 'NO VALUER ADDRESS'}|"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Valuer Telephone</strong></td>
+                            <td style="width: 50%;" th:text="|${risk.quotationValuationInfo?.valuerTelephone?: 'NO VALUER TELEPHONE'}|"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Name And Signature of Instructing officer</strong></td>
+                            <td style="width: 50%;"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%;"><strong>Date of issue</strong></td>
+                            <td style="width: 50%;" th:text="${risk.quotationValuationInfo?.dateOfIssue}"></td>
+                        </tr>
+                    </table>
+            </span>
+        </div>
+     </span>
+    <p><strong>Requirements</strong></p>
+    <ul>
+        <li style="margin-bottom: 10px;">Copy of log book or importation documents</li>
+        <li style="margin-bottom: 10px;">KRA PIN (Provide Copy) __________________________________________________</li>
+        <li style="margin-bottom: 10px;">Telephone No ____________________________________________________________</li>
+        <li style="margin-bottom: 10px;"> ID NO/Cert of Incorporation (Provide Copy) ______________________________</li>
+        <li style="margin-bottom: 10px;">Email Address ___________________________________________________________</li>
+    </ul>
+    <div style="margin-top: 5px" th:each="risk : ${quotePdct?.quotationRisks}" >
+        <div style="margin-bottom: 10px;" th:each="note : ${risk.quotationValuationInfo?.valuerNote}" >
+            <p th:text="|${note}|"></p>
+        </div>
+    </div>
+    <p>
+        <strong style="margin-top: 20px;">
+            In the event of an accident/theft occurring before the vehicle is submitted for valuation, the claim will be considered based on the
+            pre-accidental/pre-theft value of the vehicle.
+        </strong>
+    </p>
+    <div class="page-footer">
+        <div>
+            <div>
+                <strong>
+                    <small>
+                        Powered by
+                    </small>
+                </strong>
+            </div>
+            <img th:src="@{classpath:static/images/AgencifyLogo.png}" style="height: 18.75px; width: 50px;" />
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,167 @@
+@Library("agencify-shared-lib") _
+pipeline {
+    agent any
+    stages {
+        stage('Unit Test') {
+            agent {
+                docker {
+                    image 'gradle:8.2.1-jdk17-alpine'
+                    args '-u root:root'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        sh 'chmod +x gradlew'
+                        sh 'gradle clean test'
+                        publishCoverage adapters: [jacocoAdapter('**/reports/jacoco/test/*.xml')]
+                    }
+                }
+            }
+        }
+        stage('Style Check') {
+            agent {
+                docker {
+                    image 'gradle:8.2.1-jdk17-alpine'
+                    args '-u root:root'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        sh 'chmod +x gradlew'
+                        sh 'gradle clean check'
+
+                        def checkstyle = scanForIssues tool: checkStyle(pattern: '**/reports/checkstyle/main.xml')
+                        publishIssues issues: [checkstyle]
+
+                        def spotbugs = scanForIssues tool: spotBugs(pattern: '**/reports/spotbugs/main.xml')
+                        publishIssues issues: [spotbugs]
+
+                        publishIssues id: 'analysis', name: 'All Issues',
+                                issues: [checkstyle, spotbugs],
+                                filters: [includePackage('io.jenkins.plugins.analysis.*')]
+                    }
+                }
+            }
+        }
+        stage('Quality Gate') {
+            agent {
+                docker {
+                    image 'gradle:8.2.1-jdk17-alpine'
+                    args '-u root:root'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        withSonarQubeEnv("sonarserver") {
+                            sh 'chmod +x gradlew'
+                            sh 'gradle clean test sonar'
+                        }
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Set Image Version') {
+            agent {
+                docker {
+                    image 'gradle:8.2.1-jdk17-alpine'
+                    args '-u root:root'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        env.appversion = sh(returnStdout: true, script: 'gradle properties -q | grep "version:" | awk \'{print $2}\'').trim()
+                        sh "echo ${env.appversion}"
+                    }
+                }
+            }
+        }
+
+        stage('Set Image Name') {
+            agent {
+                docker {
+                    image 'dtzar/helm-kubectl'
+                    reuseNode true
+                    args '--net="host"'
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        env.appname = sh(returnStdout: true, script: 'helm show chart ./charts | grep name | cut -d: -f 2 | tr -d " "').trim()
+                    }
+                }
+            }
+        }
+
+        stage('Build and Push Image') {
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        def app = docker.build("10.0.3.224:8003/${env.appname}:${env.appversion}")
+                        docker.withRegistry('http://10.0.3.224:8003', 'docker-registry') {
+                            app.push("${env.appversion}")
+                            app.push("latest")
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Package helm chart') {
+            agent {
+                docker {
+                    image 'dtzar/helm-kubectl'
+                    reuseNode true
+                    args '--net="host"'
+                }
+            }
+
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        sh "helm package charts/  --app-version ${env.appversion} --version ${env.appversion}"
+                        withCredentials([usernamePassword(credentialsId: 'docker-registry', passwordVariable: 'pass', usernameVariable: 'user')]) {
+                            sh "curl -u docker-registry:$pass http://10.0.3.224:8002/repository/agencify-helm-repo/ --upload-file ${env.appname}-${appversion}.tgz -v"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy chart') {
+            agent {
+                docker {
+                    image 'dtzar/helm-kubectl'
+                    reuseNode true
+                    args '--net="host"'
+                }
+            }
+            steps {
+                script {
+                    ws("${env.WORKSPACE}/${sh(script: 'ls -d */|head -n 1', returnStdout: true).trim()}") {
+                        def K8_ENV = backendPipeline.setEnv()
+                        def K8_ENV_SECRET = backendPipeline.getK8Secret()
+                        def K8_API = backendPipeline.setK8Api()
+                        withKubeCredentials(kubectlCredentials: [[credentialsId: "$K8_ENV_SECRET", serverUrl: "$K8_API"]]) {
+                            sh "helm list -n $K8_ENV"
+                            sh "helm upgrade --install --set image.repository='10.0.3.224:8003/${env.appname}:${env.appversion}' --set image.tag='${env.appversion}' ${env.appname} charts/ -n $K8_ENV"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

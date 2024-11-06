@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" th:href="@{quotations.css}">
+</head>
+
+<body th:each="quotePdct : ${quote?.quotationProducts}">
+<div class="center">
+    <div class="row" style="margin-bottom: 5px">
+        <div class="column">
+            <img th:src="${quote.organization?.entities?.imageUrl}" style="height: 130px; width: 200px; object-fit: contain;"/>
+        </div>
+        <div class="column" style="text-align: right;">
+            <p th:text="${quote.organization?.entities?.organizationName}"></p>
+            <p th:text="${quote.organization?.entities?.phoneNumber}"></p>
+            <p th:text="${quote.organization?.entities?.emailAddress}"></p>
+        </div>
+    </div>
+    <p th:text="${quote.reportDate}"></p>
+    <p th:text="| Dear  ${quote.clientName?: 'NA'},|"></p>
+    <div>
+        <strong style="text-decoration: underline;">
+            <p th:text="${ quotePdct.productDesc + ' INSURANCE QUOTATION'}"></p>
+        </strong>
+    </div>
+    <P>Thank you for requesting us to provide a quote for the above mentioned. We are pleased to submit the quote as
+        follows:-</P>
+    <strong th:text="${'PREMIUM QUOTATION SUMMARY ('+quote.currencyDescription+')'}"></strong>
+    <div>
+        <table style="width: 100%; margin-top: 20px;">
+            <tr>
+                <td>Quote Number</td>
+                <td th:text="${quote.quotationNo}"></td>
+            </tr>
+            <tr>
+                <td>IPay Ref</td>
+                <td th:text="${quote.paymentRef}"></td>
+            </tr>
+        </table>
+    </div>
+    <div>
+        <table style="width: 100%; margin-top: 30px;">
+            <tr>
+                <th>COVER NAME</th>
+                <th th:text="${'SUM INSURED ('+quote.currencyDescription+')'}"></th>
+                <th th:text="${'PREMIUM ('+quote.currencyDescription+')'}"></th>
+            </tr>
+                <tr th:each="risk : ${quotePdct.quotationRisks}">
+                    <td th:text="${risk.coverTypeWording}"></td>
+                    <td class="align-left" th:text="${risk.valueString}"></td>
+                    <td class="align-left" th:text="${risk.premiumString}"></td>
+                </tr>
+
+                <tr>
+                    <td style="border: 0px"></td>
+                    <td><strong th:text="${'SUB-TOTAL PREMIUM ('+quote.currencyDescription+')'}"></strong></td>
+                    <td class="align-left" th:text="${quotePdct.premiumAmountString}"></td>
+                </tr>
+                <tr th:each="tax : ${quotePdct.quotationProductTaxes}">
+                    <td style="border: 0px"></td>
+                    <td style="width: 120px" th:text="${tax.taxWording}"></td>
+                    <td class="align-left" th:text="${tax.taxAmountString}"></td>
+                </tr>
+                <tr>
+                    <td style="border: 0px"></td>
+                    <td><strong th:text="${'ANNUAL PREMIUM ('+quote.currencyDescription+')'}"></strong></td>
+                    <td class="align-left" th:text="${quotePdct.futureAnnualPremiumString}"></td>
+                </tr>
+                <tr th:if="${quotePdct?.getInstallmentAllowed().getLiteral() == 'Y'}">
+                    <td style="border: 0px"></td>
+                    <td><strong th:text="${'FIRST PREMIUM ('+quote.currencyDescription+')'}"></strong></td>
+                    <td class="align-left" th:text="${quotePdct.firstPremium}"></td>
+                </tr>
+                <tr th:if="${quotePdct?.getInstallmentAllowed().getLiteral() == 'Y'}">
+                    <td style="border: 0px"></td>
+                    <td><strong th:text="${'NEXT PREMIUM ('+quote.currencyDescription+')'}"></strong></td>
+                    <td class="align-left" th:text="${quotePdct.nextPremium}"></td>
+                </tr>
+
+        </table>
+    </div>
+    <p>The detailed quotation is hereby attached for your perusal.</p>
+    <p>We await your closing instructions.</p>
+    <p>Your's Faithfully</p>
+    <p th:text="${quote.organization?.entities?.organizationName}" ></p>
+    <p><strong>THIS QUOTATION IS VALID FOR A PERIOD OF 60 DAYS FROM THE DATE OF ISSUE</strong></p>
+    <div class="page-footer">
+        <div>
+            <div>
+                <strong>
+                    <small>
+                        Powered by
+                    </small>
+                </strong>
+            </div>
+            <img th:src="@{classpath:static/images/AgencifyLogo.png}" style="height: 18.75px; width: 50px;" />
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

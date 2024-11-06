@@ -1,0 +1,9 @@
+spring:
+  cloud:
+    config:
+      uri: ${CONFIG_SERVICE_URL}
+      lable: oracle
+  application:
+    name: quotationservice
+  main:
+    allow-bean-definition-overriding: true

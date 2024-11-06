@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" th:href="@{quotations.css}">
+</head>
+
+<body th:each="quoteProduct : ${renewalNotice?.quotationProducts}">
+    <div class="center">
+        <div class="row">
+            <div class="column">
+                <img th:src="${renewalNotice.organization?.entities?.imageUrl}" style="height: 130px; width: 200px; object-fit: contain;"/>
+            </div>
+            <div class="column" style="text-align: right;">
+                <p th:text="|${renewalNotice.organization?.entities?.organizationName ?: 'NA'}|"></p>
+                <p th:text="|${renewalNotice.organization?.entities?.phoneNumber ?: 'NA'}|"></p>
+                <p th:text="|${renewalNotice.organization?.entities?.emailAddress ?: 'NA'}|"></p>
+            </div>
+        </div>
+        <p style="text-align: center;">
+            <strong>
+                RENEWAL NOTICE
+            </strong>
+        </p>
+        <div>
+            <div class="row" style=" padding: 5px;">
+                <div class="column">
+                    <p th:text="|${renewalNotice.clientName?: 'NO CLIENT NAME'}|"></p>
+                    <p th:text="|${renewalNotice.clientAddress ?: 'NO ADDRESS'}|"></p>
+                    <p th:text="|${renewalNotice.clientPhoneNumber?: 'NO PHONE NUMBER'}|"></p>
+                </div>
+            </div>
+            <p th:text="|Dear ${renewalNotice.clientName?: 'NA'},|"></p>
+            <p style="font-weight: bold" th:text="|${quoteProduct.productDesc?: 'PRODUCT'}, POLICY NO  ${renewalNotice.policyNo?: 'NA'}|"></p>
+            <p th:text="|We write to remind you that the above policy, which we have the pleasure of arranging on your behalf, expires on ${renewalNotice.expiryDateString?: 'NA'}|"></p>
+            <p>The renewal is as follows:- <br/>
+                {Risk details as per the risk note} including the {broken down payable premium for the policy}</p>
+            <p style="margin-top: 10px;">Risk details as per risk note</p>
+            <div>
+                <table style="width: 50%;">
+                    <tr>
+                        <th>CHARGE</th>
+                        <th th:text="|AMOUNT (${renewalNotice.currencyDescription?: ''})|"></th>
+                    </tr>
+                    <tr>
+                        <td>Basic Premium</td>
+                        <td style="text-align: right;" th:text="${quoteProduct.premiumAmountString}"></td>
+                    </tr>
+                    <tr th:each="tax : ${quoteProduct.quotationProductTaxes}">
+                        <td th:text="${tax.taxWording}"></td>
+                        <td style="text-align: right;" th:text="${tax.taxAmountString}"></td>
+                    </tr>
+                    <tr>
+                        <td>Total Premium</td>
+                        <td style="text-align: right;" th:text="${quoteProduct.futureAnnualPremiumString}"></td>
+                    </tr>
+                </table>
+            </div>
+            <p th:text="|It is strongly recommended that the vehicle(s) be valued before ${renewalNotice.expiryDateString?: 'NA'} so as to ascertain the current market
+                values to avoid under-insurance for which you will be penalized in the event of a claim. We have therefore attached 
+                a valuation letter to ${renewalNotice.agentName?: 'NO AGENT'} which you will present to any of their branches along with the logbook(s) for the
+                vehicle(s) to facilitate valuation. This is a free service. Please note that change of values will attract a revision of 
+                premiums indicated above|"></p>
+            <p style="margin-top: 10px;" th:text="|${quoteProduct.valuerNotes?: 'NO VALUER NOTES'}|"></p>
+            <p  th:text="|Kindly contact the Bancassurance officer at your nearest branch and give renewal instructions as you make payment
+                arrangements or send the instructions via e-mail to ${renewalNotice.organization?.entities?.emailAddress ?: 'NA'} before ${renewalNotice.expiryDateString?: 'NA'}.
+                We sincerely appreciate your continued business support and cooperation.|"></p>
+            <p style="margin-top: 10px" th:text="|For and on behalf of ${renewalNotice.organization?.entities?.organizationName?: 'NA'}|"></p>
+            <p style="margin-top: 10px;">Signature ____________________________________</p>
+        </div>
+        <div class="page-footer">
+            <p>Powered by</p>
+            <img th:src="@{classpath:static/images/AgencifyLogo.png}" style="height: 18.75px; width: 50px;" />
+        </div>
+        </div>
+    </div>
+</body>
+
+</html>

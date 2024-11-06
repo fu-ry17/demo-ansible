@@ -1,0 +1,186 @@
+---
+- name: Execute Pipeline Steps
+  hosts: application_servers
+  vars:
+    workspace_dir: "{{ lookup('pipe', 'ls -d */|head -n 1') }}"
+    app_version: "{{ lookup('pipe', './gradlew properties -q | grep \"version:\" | grep -v \"kotlin.version:\" | awk -F \":\" \"{print $2}\"').trim() }}"
+    env_tag: "{{ lookup('pipe', 'git tag --contains | head -1').trim() }}"
+    docker_registry: "{{ docker_registry }}"
+    
+    # Constants from original pipeline
+    MASTER_BRANCH: "{{ MASTER_BRANCH }}"
+    DEVELOP_BRANCH: "{{ DEVELOP_BRANCH }}"
+    PREPROD_BRANCH: "{{ PREPROD_BRANCH }}"
+    PRODUCTION_BRANCH: "{{ PRODUCTION_BRANCH }}"
+    PRODUCTION_TAG: "{{ PRODUCTION_TAG }}"
+
+  pre_tasks:
+    - name: Determine Environment
+      set_fact:
+        env_type: >-
+          {% if env_tag is regex(PRODUCTION_TAG) %}prod
+          {% elif branch_name == PRODUCTION_BRANCH %}prod
+          {% elif branch_name == PREPROD_BRANCH %}preprod
+          {% elif branch_name == MASTER_BRANCH %}staging
+          {% elif branch_name == DEVELOP_BRANCH %}dev
+          {% else %}dev{% endif %}
+
+    - name: Set K8s Environment Variables
+      set_fact:
+        k8s_secret: >-
+          {% if env_type == 'prod' %}k8sonprodNS-prod
+          {% elif env_type == 'preprod' %}k8sonPreprodNS-Preprod
+          {% elif env_type == 'staging' %}k8sonNewDevNS-Staging
+          {% elif env_type == 'dev' %}k8sonNewDevNS-Dev
+          {% else %}k8sonNewDevNS-Dev{% endif %}
+        k8s_api: >-
+          {% if env_type in ['prod', 'preprod'] %}{{ k8s_api_prod }}
+          {% else %}{{ k8s_api_dev }}{% endif %}
+        k8s_domain: >-
+          {% if env_type in ['prod', 'preprod'] %}{{ domain_prod }}
+          {% else %}{{ domain_dev }}{% endif %}
+        k8s_route: >-
+          {% if env_type == 'prod' %}/prod
+          {% elif env_type == 'preprod' %}/preprod
+          {% elif env_type == 'staging' %}/staging/v1
+          {% else %}/api{% endif %}
+
+  tasks:
+    - name: Checkout Code
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ workspace_dir }}"
+        version: "{{ branch_name | default('develop') }}"
+
+    - name: Setup Environment
+      docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - "gradle:8.2.1-jdk17-alpine"
+        - "dtzar/helm-kubectl"
+
+    - name: Run Unit Tests
+      command: "./gradlew clean test --build-cache -DactiveProfile={{ env_type }}"
+      args:
+        chdir: "{{ workspace_dir }}"
+      register: test_result
+      failed_when: test_result.rc != 0
+
+    - name: Run SonarQube Analysis
+      block:
+        - name: Execute SonarQube Scan
+          command: "./gradlew clean test sonar --build-cache"
+          args:
+            chdir: "{{ workspace_dir }}"
+          environment:
+            SONAR_HOST_URL: "{{ sonar_url }}"
+            SONAR_LOGIN: "{{ sonar_token }}"
+          
+        - name: Wait for Quality Gate
+          uri:
+            url: "{{ sonar_url }}/api/qualitygates/project_status?projectKey={{ project_key }}"
+            method: GET
+            return_content: yes
+            headers:
+              Authorization: "Bearer {{ sonar_token }}"
+          register: qg_result
+          until: qg_result.json.projectStatus.status == 'OK'
+          retries: 10
+          delay: 10
+
+    - name: Build and Push Docker Image
+      block:
+        - name: Build Docker Image
+          docker_image:
+            build:
+              path: "{{ workspace_dir }}"
+            name: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}"
+            tag: "{{ app_version }}"
+            push: yes
+            source: build
+          register: docker_build
+
+        - name: Push Latest Tag
+          docker_image:
+            name: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}"
+            repository: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}:latest"
+            push: yes
+            source: local
+      notify: Send Build Info
+
+    - name: Package and Push Helm Chart
+      block:
+        - name: Package Helm Chart
+          command: "helm package charts/ --app-version {{ app_version }} --version {{ app_version }}"
+          args:
+            chdir: "{{ workspace_dir }}"
+
+        - name: Push Helm Chart
+          uri:
+            url: "http://10.0.3.224:8002/repository/agencify-helm-repo/"
+            method: PUT
+            user: docker-registry
+            password: "{{ helm_repo_password }}"
+            src: "{{ workspace_dir }}/{{ chart_name }}-{{ app_version }}.tgz"
+            force_basic_auth: yes
+
+    - name: Deploy Application
+      block:
+        - name: Set Environment Variables
+          set_fact:
+            k8s_env: "{{ lookup('pipe', 'determine_env.sh') }}"
+            k8s_secret: "{{ lookup('pipe', 'determine_k8s_secret.sh') }}"
+            k8s_api: "{{ lookup('pipe', 'determine_k8s_api.sh') }}"
+            k8s_domain: "{{ lookup('pipe', 'determine_k8s_domain.sh') }}"
+            k8s_route: "{{ lookup('pipe', 'determine_k8s_route.sh') }}"
+
+        - name: Deploy to Development
+          when: k8s_env == 'dev'
+          command: |
+            ssh ubuntu@10.0.3.74 'cd /home/ubuntu/agencify-backend && 
+            git fetch && 
+            git checkout {{ branch_name }} && 
+            git pull origin {{ branch_name }} --rebase && 
+            sudo docker compose up -d'
+
+        - name: Deploy to Staging
+          when: k8s_env == 'staging'
+          command: |
+            ssh ubuntu@10.0.3.85 'cd /home/ubuntu/agencify-backend && 
+            git fetch && 
+            git checkout {{ branch_name }} && 
+            git pull origin {{ branch_name }} --rebase && 
+            sudo docker compose -f staging-compose.yml up -d'
+
+        - name: Deploy to Production
+          when: k8s_env == 'prod'
+          command: |
+            helm upgrade --install \
+            --set image.repository='{{ docker_registry }}/{{ app_name }}-{{ k8s_env }}:{{ app_version }}' \
+            --set image.tag='{{ app_version }}' \
+            --set ingress.domain='{{ k8s_domain }}' \
+            --set ingress.route='{{ k8s_route }}' \
+            {{ app_name }} charts/ -n {{ k8s_env }}
+          args:
+            chdir: "{{ workspace_dir }}"
+          environment:
+            KUBECONFIG: "/path/to/kubeconfig"
+
+  handlers:
+    - name: Send Build Info
+      uri:
+        url: "{{ jira_url }}/rest/builds/0.1/bulk"
+        method: POST
+        body:
+          builds:
+            - buildNumber: "{{ app_version }}"
+              pipelineId: "{{ pipeline_id }}"
+              buildState: "{{ build_state }}"
+              testInfo:
+                totalNumber: "{{ test_result.stdout | regex_search('(\\d+) tests completed') }}"
+                numberPassed: "{{ test_result.stdout | regex_search('(\\d+) tests successful') }}"
+                numberFailed: "{{ test_result.stdout | regex_search('(\\d+) tests failed') }}"
+        body_format: json
+        headers:
+          Authorization: "Bearer {{ jira_token }}" 
