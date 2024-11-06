@@ -8,8 +8,6 @@ node {
     SSH_KEY = '/var/lib/jenkins/.ssh/id_ed25519'
     
     stage('Run Pipeline') {
-        withCredentials([sshUserPrivateKey(credentialsId: 'agencify-backend', 
-                                        keyFileVariable: 'SSH_KEY')]) {
             sh """
                 ansible-playbook \\
                     -i ${ANSIBLE_PATH}/inventory.ini \\
@@ -20,6 +18,5 @@ node {
                     # --vault-password-file ${VAULT_PASS_PATH} \\
                     # --extra-vars '@${ANSIBLE_PATH}/vars/vault.yml'
             """
-        }
     }
 } 
