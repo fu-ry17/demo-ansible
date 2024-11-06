@@ -7,15 +7,13 @@ node {
     VAULT_PASS_PATH = '/var/lib/jenkins/.vault_pass'
     
     stage('Run Pipeline') {
-        sshagent(['agencify-backend']) {
-            sh """
-                ansible-playbook \\
-                    -i ${ANSIBLE_PATH}/inventory.ini \\
-                    ${ANSIBLE_PATH}/pipeline.yml \\
-                    -e "branch_name=${env.BRANCH_NAME}"
-                    # --vault-password-file ${VAULT_PASS_PATH} \\
-                    # --extra-vars '@${ANSIBLE_PATH}/vars/vault.yml'
-            """
-        }
+        sh """
+            ansible-playbook \\
+                -i ${ANSIBLE_PATH}/inventory.ini \\
+                ${ANSIBLE_PATH}/pipeline.yml \\
+                -e "branch_name=${env.BRANCH_NAME}"
+                # --vault-password-file ${VAULT_PASS_PATH} \\
+                # --extra-vars '@${ANSIBLE_PATH}/vars/vault.yml'
+        """
     }
 } 
