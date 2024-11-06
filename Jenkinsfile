@@ -4,19 +4,21 @@ node {
     }
 
     ANSIBLE_PATH = '/etc/ansible/pipeline'
-    VAULT_PASS_PATH = '/var/lib/jenkins/.vault_pass'
-    SSH_KEY = '/var/lib/jenkins/.ssh/id_ed25519'
     
     stage('Run Pipeline') {
-            sh """
-                ansible-playbook \\
-                    -i ${ANSIBLE_PATH}/inventory.ini \\
-                    ${ANSIBLE_PATH}/pipeline.yml \\
-                    -e "branch_name=${env.BRANCH_NAME}" \\
-                    -e "ansible_ssh_private_key_file=${SSH_KEY}" \\
-                    -vvv
-                    # --vault-password-file ${VAULT_PASS_PATH} \\
-                    # --extra-vars '@${ANSIBLE_PATH}/vars/vault.yml'
-            """
+        // First ensure SSH key has correct permissions
+        sh """
+            sudo chown jenkins:jenkins /var/lib/jenkins/.ssh/id_ed25519
+            sudo chmod 600 /var/lib/jenkins/.ssh/id_ed25519
+            
+            # Test SSH connection first
+            ssh -i /var/lib/jenkins/.ssh/id_ed25519 -o StrictHostKeyChecking=no ubuntu@10.0.3.85 'echo "SSH connection successful"'
+            
+            # Run ansible playbook
+            ansible-playbook \\
+                -i ${ANSIBLE_PATH}/inventory.ini \\
+                ${ANSIBLE_PATH}/pipeline.yml \\
+                -e "branch_name=${env.BRANCH_NAME}"
+        """
     }
 } 
