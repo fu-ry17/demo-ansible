@@ -2,10 +2,11 @@ node {
     stage('Checkout') {
         checkout scm
     }
+
+    ANSIBLE_PATH = '/etc/ansible/pipeline'
+    VAULT_PASS_PATH = '~/.vault_pass'
     
     stage('Run Pipeline') {
-        dir('/etc/ansible/pipeline') {
-            sh 'ansible-playbook -i inventory.ini pipeline.yml --vault-password-file ~/.vault_pass'
-        }
+        sh "ansible-playbook -i ${ANSIBLE_PATH}/inventory.ini ${ANSIBLE_PATH}/pipeline.yml --vault-password-file ${VAULT_PASS_PATH} --extra-vars '@${ANSIBLE_PATH}/vars/vault.yml'"
     }
 } 
