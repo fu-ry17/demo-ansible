@@ -12,11 +12,14 @@ pipeline {
     }
     
     stages {
-        // stage('Checkout') {
-        //     steps {
-        //         checkout scm
-        //     }
-        // }
+        stage('Check Environment') {
+            steps {
+                sh """
+                    echo "Current user: $(whoami)"
+                    echo "Which java: $(which java)"
+                """
+            }
+        }
         
         stage('SSH Test') {
             steps {
