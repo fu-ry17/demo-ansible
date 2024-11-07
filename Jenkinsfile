@@ -59,7 +59,7 @@ pipeline {
                                 -e \"ansible_connection_timeout=60\" \
                                 -e \"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o ConnectTimeout=60'\" \
                                 --limit staging-server \
-                                -vvv
+                                -vv
                         """
                     } catch (Exception e) {
                         echo "Pipeline failed: ${e.getMessage()}"

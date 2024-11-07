@@ -18,7 +18,6 @@
     sonar_password: 'Agencify4Ever@2024'
     project_key: 'agencify-quotation'
     sonar_token: 'sqp_9c1f3f39c78719294e4c2487604fa1dfdda1e006'
-    docker_registry: 'marimba.agencify.insure'
     docker_registry_password: 'RCI497ksiR39'
     app_name: 'gis-quotation-service'
     app_version: '1.0.0'
@@ -31,34 +30,10 @@
       apt:
         name:
           - openjdk-21-jdk
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
+          - docker.io
         state: present
         update_cache: yes
-
-    - name: Add Docker GPG key and repository
-      block:
-        - name: Add Docker GPG key
-          apt_key:
-            url: https://download.docker.com/linux/ubuntu/gpg
-            state: present
-
-        - name: Add Docker repository
-          apt_repository:
-            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-            state: present
-            update_cache: yes
-
-    - name: Install Docker
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-        state: present
+        install_recommends: yes
 
     - name: Configure Docker
       block:
@@ -149,27 +124,40 @@
               Authorization: "Bearer {{ sonar_token }}"
           register: qg_result
           until: qg_result.json.projectStatus.status == 'OK'
-          retries: 3
+          retries: 1
           delay: 10
 
     - name: Build and Push Docker Image
       block:
+      
+        - name: Login to Docker Registry
+          docker_login:
+            registry: "{{ DOCKER_REGISTRY }}"  # 10.0.3.224:8003
+            username: docker-registry
+            password: "{{ docker_registry_password }}"
+            reauthorize: yes
+
         - name: Build Docker Image
           docker_image:
             build:
               path: "{{ workspace_dir }}"
-            name: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}"
+              pull: yes
+            name: "{{ DOCKER_REGISTRY }}/{{ app_name }}-{{ env_type }}"
             tag: "{{ app_version }}"
             push: yes
             source: build
           register: docker_build
+          become: yes
+          retries: 1
+          delay: 5
+          until: docker_build is success
 
-        - name: Push Latest Tag
-          docker_image:
-            name: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}"
-            repository: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}:latest"
-            push: yes
-            source: local
+    - name: Push Latest Tag
+      docker_image:
+        name: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}"
+        repository: "{{ docker_registry }}/{{ app_name }}-{{ env_type }}:latest"
+        push: yes
+        source: local
       notify: Send Build Info
 
     - name: Package and Push Helm Chart
