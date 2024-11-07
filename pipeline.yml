@@ -13,10 +13,32 @@
     PRODUCTION_BRANCH: 'production'
     DOCKER_REGISTRY: '10.0.3.224:8003'
     workspace_dir: "{{ lookup('env', 'WORKSPACE') }}"
-    
+    sonar_url: 'https://obokano.agencify.insure'
+    sonar_user: 'brian.muraya'
+    sonar_password: 'Agencify4Ever@2024'
+    project_key: 'agencify-quotation'
+    sonar_token: 'sqp_9c1f3f39c78719294e4c2487604fa1dfdda1e006'
+    docker_registry: 'marimba.agencify.insure'
+    docker_registry_password: 'RCI497ksiR39'
+    app_name: 'gis-quotation-service'
+    app_version: '1.0.0'
+
   pre_tasks:
     - name: Ensure SSH connection works
       ping:
+
+    - name: Install Java 21
+      apt:
+        name: openjdk-21-jdk
+        state: present
+        update_cache: yes
+      become: yes
+          
+    - name: Verify installations
+      command: "{{ item }}"
+      with_items:
+        - java -version
+      changed_when: false
       
   tasks:
     - name: Set environment type
@@ -57,7 +79,8 @@
             chdir: "{{ workspace_dir }}"
           environment:
             SONAR_HOST_URL: "{{ sonar_url }}"
-            SONAR_LOGIN: "{{ sonar_token }}"
+            SONAR_USERNAME: "{{ sonar_user }}"
+            SONAR_PASSWORD: "{{ sonar_password }}"
           
         - name: Wait for Quality Gate
           uri:
@@ -68,7 +91,7 @@
               Authorization: "Bearer {{ sonar_token }}"
           register: qg_result
           until: qg_result.json.projectStatus.status == 'OK'
-          retries: 10
+          retries: 3
           delay: 10
 
     - name: Build and Push Docker Image
@@ -155,7 +178,9 @@
         url: "{{ jira_url }}/rest/builds/0.1/bulk"
         method: POST
         body_format: json
-        body: |
+        headers:
+          Authorization: "Bearer {{ jira_token }}"
+        body: >-
           {
             "builds": [{
               "buildNumber": "{{ app_version }}",
@@ -168,5 +193,3 @@
               }
             }]
           }
-        headers:
-          Authorization: "Bearer {{ jira_token }}" 

@@ -37,3 +37,6 @@ out/
 *.bak*
 
 *.pdf
+
+pipeline.yml
+pipe-back.yml
