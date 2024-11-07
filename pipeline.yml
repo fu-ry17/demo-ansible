@@ -12,7 +12,7 @@
     PREPROD_BRANCH: 'preprod'
     PRODUCTION_BRANCH: 'production'
     DOCKER_REGISTRY: '10.0.3.224:8003'
-    project_name: 'tq_quotation'
+    workspace_dir: "{{ lookup('env', 'WORKSPACE') }}"
     
   pre_tasks:
     - name: Ensure SSH connection works
@@ -31,16 +31,19 @@
     - name: Debug workspace path
       debug:
         msg: "Working directory is {{ workspace_dir }}"
+      delegate_to: 127.0.0.1
 
     - name: Verify workspace directory exists
       stat:
         path: "{{ workspace_dir }}"
       register: workspace_stat
+      delegate_to: 127.0.0.1
 
     - name: Fail if workspace doesn't exist
       fail:
         msg: "Workspace directory {{ workspace_dir }} does not exist"
       when: not workspace_stat.stat.exists
+      delegate_to: 127.0.0.1
 
     - name: Setup Environment
       docker_image:
