@@ -27,18 +27,76 @@
     - name: Ensure SSH connection works
       ping:
 
-    - name: Install Java 21
+    - name: Install required packages
       apt:
-        name: openjdk-21-jdk
+        name:
+          - openjdk-21-jdk
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
         state: present
         update_cache: yes
-      become: yes
-          
+
+    - name: Add Docker GPG key and repository
+      block:
+        - name: Add Docker GPG key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            state: present
+
+        - name: Add Docker repository
+          apt_repository:
+            repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+            state: present
+            update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Configure Docker
+      block:
+        - name: Add user to docker group
+          user:
+            name: "{{ ansible_user }}"
+            groups: docker
+            append: yes
+
+        - name: Start Docker service
+          service:
+            name: docker
+            state: started
+            enabled: yes
+
     - name: Verify installations
-      command: "{{ item }}"
-      with_items:
-        - java -version
-      changed_when: false
+      block:
+        - name: Check Java version
+          command: java -version
+          register: java_version
+          changed_when: false
+
+        - name: Check Docker version
+          command: docker --version
+          register: docker_version
+          changed_when: false
+
+        - name: Check Docker service status
+          command: systemctl status docker
+          register: docker_status
+          changed_when: false
+
+        - name: Display verification results
+          debug:
+            msg:
+              - "Java Version: {{ java_version.stderr }}"
+              - "Docker Version: {{ docker_version.stdout }}"
+              - "Docker Status: {{ docker_status.stdout_lines[2] }}"
       
   tasks:
     - name: Set environment type
