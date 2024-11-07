@@ -6,12 +6,26 @@
   
   vars:
     ansible_ssh_private_key_file: /var/lib/jenkins/.ssh/id_ed25519
+    PRODUCTION_TAG: '-rc'
+    MASTER_BRANCH: 'master'
+    DEVELOP_BRANCH: 'develop'
+    PREPROD_BRANCH: 'preprod'
+    PRODUCTION_BRANCH: 'production'
     
   pre_tasks:
     - name: Ensure SSH connection works
       ping:
       
   tasks:
+    - name: Set environment type
+      set_fact:
+        env_type: >-
+          {% if branch_name == 'master' %}staging
+          {% elif branch_name == 'develop' %}dev
+          {% elif branch_name == 'preprod' %}preprod
+          {% elif branch_name == 'production' %}prod
+          {% else %}dev{% endif %}
+
     - name: Checkout Code
       git:
         repo: "{{ git_repo_url }}"
