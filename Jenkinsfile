@@ -8,11 +8,7 @@ pipeline {
         ANSIBLE_HOST_KEY_CHECKING = 'False'
         ANSIBLE_SSH_RETRIES = '5'
         ANSIBLE_TIMEOUT = '60' 
-        TARGET_SERVER = '10.0.3.85'
-        ANSIBLE_STDOUT_CALLBACK = 'yaml'
-        ANSIBLE_DISPLAY_SKIPPED_HOSTS = 'False'
-        ANSIBLE_DISPLAY_OK_HOSTS = 'True'
-        ANSIBLE_SHOW_CUSTOM_STATS = 'True'
+        TARGET_SERVER = '10.0.3.85' 
     }
     
     stages {
@@ -30,7 +26,7 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            echo "Testing SSH connection..."
+                            echo "Testing direct SSH connection..."
                             timeout 10 ssh -i ${SSH_KEY} \
                                 -o ConnectTimeout=10 \
                                 -o StrictHostKeyChecking=no \
@@ -49,6 +45,11 @@ pipeline {
                 script {
                     try {
                         sh """
+                            # Set extended Ansible SSH timeout
+                            export ANSIBLE_TIMEOUT=60
+                            export ANSIBLE_SSH_TIMEOUT=60
+                            export ANSIBLE_CONNECT_TIMEOUT=60
+                            
                             ansible-playbook \
                                 -i ${ANSIBLE_PATH}/inventory.ini \
                                 ${ANSIBLE_PATH}/pipeline.yml \
@@ -56,12 +57,17 @@ pipeline {
                                 -e \"ansible_ssh_private_key_file=${SSH_KEY}\" \
                                 -e \"ansible_user=yewa\" \
                                 -e \"ansible_connection_timeout=60\" \
-                                -e \"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'\" \
-                                --limit staging-server
+                                -e \"ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o ConnectTimeout=60'\" \
+                                --limit staging-server \
+                                -vvv
                         """
                     } catch (Exception e) {
                         echo "Pipeline failed: ${e.getMessage()}"
-                        sh 'ss -tulpn | grep :22 || true'
+                        sh '''
+                            echo "=== Final Diagnostics ==="
+                            ss -tulpn | grep :22 || true
+                            journalctl -u sshd -n 50 || true
+                        '''
                         throw e
                     }
                 }
@@ -70,6 +76,16 @@ pipeline {
     }
     
     post {
+        always {
+            script {
+                sh '''
+                    echo "=== Environment Information ==="
+                    env | grep -i ansible || true
+                    echo "=== SSH Configuration ==="
+                    ssh -V
+                '''
+            }
+        }
         failure {
             echo "Pipeline failed - check network connectivity and SSH access"
         }
