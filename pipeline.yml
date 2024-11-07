@@ -11,6 +11,8 @@
     DEVELOP_BRANCH: 'develop'
     PREPROD_BRANCH: 'preprod'
     PRODUCTION_BRANCH: 'production'
+    DOCKER_REGISTRY: '10.0.3.224:8003'
+    project_name: 'tq_quotation'
     
   pre_tasks:
     - name: Ensure SSH connection works
@@ -20,17 +22,25 @@
     - name: Set environment type
       set_fact:
         env_type: >-
-          {% if branch_name == 'master' %}staging
+          {% if branch_name == 'main' %}staging
           {% elif branch_name == 'develop' %}dev
           {% elif branch_name == 'preprod' %}preprod
           {% elif branch_name == 'production' %}prod
           {% else %}dev{% endif %}
 
-    - name: Checkout Code
-      git:
-        repo: "{{ git_repo_url }}"
-        dest: "{{ workspace_dir }}"
-        version: "{{ branch_name | default('develop') }}"
+    - name: Debug workspace path
+      debug:
+        msg: "Working directory is {{ workspace_dir }}"
+
+    - name: Verify workspace directory exists
+      stat:
+        path: "{{ workspace_dir }}"
+      register: workspace_stat
+
+    - name: Fail if workspace doesn't exist
+      fail:
+        msg: "Workspace directory {{ workspace_dir }} does not exist"
+      when: not workspace_stat.stat.exists
 
     - name: Setup Environment
       docker_image:
@@ -152,15 +162,19 @@
       uri:
         url: "{{ jira_url }}/rest/builds/0.1/bulk"
         method: POST
-        body:
-          builds:
-            - buildNumber: "{{ app_version }}"
-              pipelineId: "{{ pipeline_id }}"
-              buildState: "{{ build_state }}"
-              testInfo:
-                totalNumber: "{{ test_result.stdout | regex_search('(\\d+) tests completed') }}"
-                numberPassed: "{{ test_result.stdout | regex_search('(\\d+) tests successful') }}"
-                numberFailed: "{{ test_result.stdout | regex_search('(\\d+) tests failed') }}"
         body_format: json
+        body: |
+          {
+            "builds": [{
+              "buildNumber": "{{ app_version }}",
+              "pipelineId": "{{ pipeline_id }}",
+              "buildState": "{{ build_state }}",
+              "testInfo": {
+                "totalNumber": "{{ test_result.stdout | regex_search('(\\d+) tests completed') }}",
+                "numberPassed": "{{ test_result.stdout | regex_search('(\\d+) tests successful') }}",
+                "numberFailed": "{{ test_result.stdout | regex_search('(\\d+) tests failed') }}"
+              }
+            }]
+          }
         headers:
           Authorization: "Bearer {{ jira_token }}" 

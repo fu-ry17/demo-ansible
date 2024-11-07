@@ -9,6 +9,7 @@ pipeline {
         ANSIBLE_SSH_RETRIES = '5'
         ANSIBLE_TIMEOUT = '60' 
         TARGET_SERVER = '10.0.3.85' 
+        WORKSPACE_PATH = "${env.WORKSPACE}/tq_quotation"
     }
     
     stages {
