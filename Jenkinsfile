@@ -14,10 +14,10 @@ pipeline {
     stages {
         stage('Check Environment') {
             steps {
-                sh """
+                sh '''
                     echo "Current user: $(whoami)"
                     echo "Which java: $(which java)"
-                """
+                '''
             }
         }
         
